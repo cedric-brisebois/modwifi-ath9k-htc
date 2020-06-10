@@ -629,7 +629,7 @@ struct ieee80211_frame_min {
 	a_uint8_t	i_dur[2];
 	a_uint8_t	i_addr1[IEEE80211_ADDR_LEN];
 	a_uint8_t	i_addr2[IEEE80211_ADDR_LEN];
-	/* FCS */
+	/*  */
 } adf_os_packed;
 
 /*

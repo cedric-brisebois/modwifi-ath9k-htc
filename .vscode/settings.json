@@ -1,0 +1,6 @@
+{
+    "files.associations": {
+        "*.x": "cpp",
+        "cstdio": "cpp"
+    }
+}

@@ -56,6 +56,8 @@
 #include "if_athvar.h"
 #include "ah_desc.h"
 #include "ah.h"
+#include "debug.h"
+#include "rhea_constants.h"
 
 #include "attacks.h"
 #include "modwifi.h"
@@ -747,17 +749,36 @@ static void tgt_HTCRecv_mgmthandler(HTC_ENDPOINT_ID EndPt, adf_nbuf_t hdr_buf,
 	ath_tgt_send_mgt(sc,hdr_buf,buf,EndPt);
 }
 
+static void ath_hal_reg_write_filter(struct ath_hal *ah,
+			a_uint32_t reg, a_uint32_t val); //me need function
+
 static void tgt_HTCRecvMessageHandler(HTC_ENDPOINT_ID EndPt,
 				      adf_nbuf_t hdr_buf, adf_nbuf_t buf,
 				      void *ServiceCtx)
 {
 	struct ath_softc_tgt *sc = (struct ath_softc_tgt *)ServiceCtx;
+	struct ath_hal *ah = sc->sc_ah;
 	struct ath_tx_buf *bf;
 	a_uint8_t *data;
 	a_uint32_t len;
 	ath_data_hdr_t *dh;
 	struct ath_node_target *an;
 	struct ath_atx_tid *tid;
+	
+	// /*rhea , used to set and clear the corr_fcs bit*/
+	// a_uint32_t reg = 32840;
+	
+	// //addr = *(a_uint32_t *) reg;
+	// addr = adf_os_ntohl(reg);
+	// a_uint32_t set_corr_fcs = 80;
+	// a_uint32_t clr_corr_fcs = 0;
+
+	
+	
+	
+	
+	//A_PUTS(itox(vlan->tpid));
+	//printk("loaded");
 
 	if (!hdr_buf) {
 		adf_nbuf_peek_header(buf, &data, &len);
@@ -765,6 +786,35 @@ static void tgt_HTCRecvMessageHandler(HTC_ENDPOINT_ID EndPt,
 	} else {
 		adf_nbuf_peek_header(hdr_buf, &data, &len);
 	}
+
+	
+	//adf_nbuf_get_vlan_info(hdl, buf, vlan);
+	//cmnos_write_char("tpid %i", vlan->tpid);
+
+	// A_PRINTF("PAKET DUMP ===============================================================\r\n");
+
+	// A_PRINTF("mac1 -> %x:%x:%x:%x:%x:%x\r\n", data[16], data[17], data[18], data[19], data[20], data[21]);
+	// A_PRINTF("mac2 -> %x:%x:%x:%x:%x:%x\r\n", data[22], data[23], data[24], data[25], data[26], data[27]);
+	// A_PRINTF("mac3 -> %x:%x:%x:%x:%x:%x\r\n", data[28], data[29], data[30], data[31], data[32], data[33]);
+	// A_PRINTF("mac4 -> %x:%x:%x:%x:%x:%x\r\n", data[34], data[35], data[36], data[37], data[38], data[39]);
+	// A_PRINTF("Data at pos 53 -> %x\r\n", data[53]);
+	if(data[54] == 0x81 && data[57] == 1 && ioread32_mac(DIAG_SW_REG) != DIAG_CORR_FCS_SET) { //rhea
+
+		A_PRINTF("VLAN packet with vlan tag -> %x,%x,%x", data[55],data[56],data[57]);
+		A_PRINTF("\r\n");
+		ath_hal_reg_write_filter(ah, DIAG_SW_REG, DIAG_CORR_FCS_SET);
+
+	} else if(ioread32_mac(DIAG_SW_REG) == DIAG_CORR_FCS_SET && data[54] != 0x81) {
+		A_PRINTF("none vlan packet and bit was set, clearing\r\n");
+		ath_hal_reg_write_filter(ah, DIAG_SW_REG, DIAG_CORR_FCS_CLR);
+	}
+	// for (i=40;i<100;i++){
+	// 	A_PRINTF("%x", data[i]);
+	// }
+	// A_PRINTF("\r\n");
+	// for(i = 0; i<len;i++) {
+	// 	A_PRINTF("buf val -> %x\r\n", data[i]);
+	// }
 
 	adf_os_assert(len >= sizeof(ath_data_hdr_t));
 	dh = (ath_data_hdr_t *)data;
@@ -780,6 +830,9 @@ static void tgt_HTCRecvMessageHandler(HTC_ENDPOINT_ID EndPt,
 		return;
 	}
 
+	//if(tid != NULL)
+	//A_PUTS(itox(dh->datatype));
+	//A_PUTS("\r\n");
 #ifdef DEBUG_INJECT_AMPDU
 	printk("RecvMsg: aggr=");
 	if (tid != NULL)
@@ -1430,6 +1483,7 @@ static void ath_node_update_tgt(void *Context, A_UINT16 Command,
 
 static a_int32_t ath_reg_read_filter(struct ath_hal *ah, a_int32_t addr)
 {
+
 	if ((addr & 0xffffe000) == 0x2000) {
 		/* SEEPROM registers */
 		ioread32_mac(addr);
@@ -1493,7 +1547,10 @@ static void ath_pll_reset_ones(struct ath_hal *ah)
 
 static void ath_hal_reg_write_filter(struct ath_hal *ah,
 			a_uint32_t reg, a_uint32_t val)
+
 {
+if(reg == 0x8048)
+	A_PRINTF("REG WRITE CALL, reg value -> %lu, data -> %lu\r\n", reg, val);
 	if(reg > 0xffff) {
 		iowrite32(reg, val);
 #if defined(PROJECT_K2)

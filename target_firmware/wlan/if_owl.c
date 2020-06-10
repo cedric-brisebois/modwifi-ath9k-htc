@@ -1287,9 +1287,12 @@ void ath_tgt_handle_normal(struct ath_softc_tgt *sc, struct ath_tx_buf *bf)
 	struct ath_node_target *an;
 
 	an = (struct ath_node_target *)bf->bf_node;
+	//A_PUTS("de mac addr\r\n");
+	//printk("de mac addr\n");
+	//A_PUTS(&an->ni.ni_bssid);
 	adf_os_assert(an);
 
-	tid = &an->tid[bf->bf_tidno];
+tid = &an->tid[bf->bf_tidno];
 	adf_os_assert(tid);
 
 	bf->bf_comp = ath_tgt_tx_comp_normal;
